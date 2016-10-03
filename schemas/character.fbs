@@ -1,0 +1,16 @@
+namespace jonoondb_tutorial;
+
+enum VitalStatus : byte { Alive = 1, Dead }
+
+table Character
+{
+  name:string;
+  house:string;
+  status:VitalStatus = Alive; // default value is Alive
+  played_by:string;
+  age_years:int;
+  first_seen:string;
+  aliases:[string];  
+}
+
+root_type Character;

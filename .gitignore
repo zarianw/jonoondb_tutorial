@@ -213,3 +213,5 @@ FakesAssemblies/
 
 
 
+/schemas/flatc.exe
+/config_generated.h

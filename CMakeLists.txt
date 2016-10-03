@@ -20,6 +20,12 @@ endif()
 include_directories(${JONOONDB_ROOT}/include)
 find_library (JonoonDB_LIBRARY jonoondb_api ${JONOONDB_ROOT}/lib)
 
+set (DB_PATH ${PROJECT_BINARY_DIR})
+set (SCHEMA_PATH ${PROJECT_SOURCE_DIR}/schemas)
+configure_file (
+  "${PROJECT_SOURCE_DIR}/config.h.in"
+  "${PROJECT_SOURCE_DIR}/config_generated.h")
+
 # jonoondb_tutorial
 add_executable(
  jonoondb_tutorial

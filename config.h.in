@@ -1,0 +1,3 @@
+// the configured options and settings
+#define DB_PATH "@DB_PATH@"
+#define SCHEMA_PATH "@SCHEMA_PATH@"
