@@ -17,8 +17,9 @@ else()
   message("JONOONDB_ROOT is not set. Standard system locations will be used to lookup headers and libs.")
 endif()
 
+
 include_directories(${JONOONDB_ROOT}/include)
-find_library (JonoonDB_LIBRARY jonoondb_api ${JONOONDB_ROOT}/lib)
+find_library (JonoonDB_LIBRARY jonoondb_api_v0 ${JONOONDB_ROOT}/lib)
 
 set (DB_PATH ${PROJECT_BINARY_DIR})
 set (SCHEMA_PATH ${PROJECT_SOURCE_DIR}/schemas)
