@@ -1,7 +1,5 @@
 #include <iostream>
-#include <string>
 #include <fstream>
-#include <exception>
 
 #include "config_generated.h"
 #include "schemas/character_generated.h"
@@ -41,19 +39,36 @@ string ReadFile(const string& path, bool isBinary = true) {
   return fileContents;
 }
 
-Buffer ConstructCharacter(string name, string house, VitalStatus sts,
-                          string playedBy, int age, string firstSeen,
-                          vector<string>& aliases) {
+Buffer ConstructCharacter(string name, string house, string playedBy,
+                          int age, string firstSeen) {
   FlatBufferBuilder fbb;
   auto fbName = fbb.CreateString(name);
   auto fbHouse = fbb.CreateString(house);
   auto fbPlayedBy = fbb.CreateString(playedBy);
-  auto fbFirstSeen = fbb.CreateString(firstSeen);
-  auto fbAliases = fbb.CreateVectorOfStrings(aliases);
-  auto obj = CreateCharacter(fbb, fbName, fbHouse, sts, fbPlayedBy, age, fbFirstSeen, fbAliases);
+  auto fbFirstSeen = fbb.CreateString(firstSeen);  
+  auto obj = CreateCharacter(fbb, fbName, fbHouse, fbPlayedBy, age, fbFirstSeen);
   fbb.Finish(obj);
   return Buffer(reinterpret_cast<char*>(fbb.GetBufferPointer()), fbb.GetSize());
 }
+
+void TutorialOpenDatabase() {
+  {
+    // Open a database with default options
+    Database db("/path/to/db",           // path where db files will be created
+                "game_of_thrones"  // database name              
+    );
+  }
+
+  {
+    Options opt;
+    opt.SetCreateDBIfMissing(false);
+    Database db("/path/to/db",           // path where db files will be created
+                "game_of_thrones", // database name 
+                opt                // options             
+    );
+  }
+}
+
 
 int main(int argc, char** argv) {
   try {
@@ -67,34 +82,51 @@ int main(int argc, char** argv) {
     string schemaFolder = SCHEMA_PATH;
     auto schema = ReadFile(schemaFolder + "/character.bfbs");
 
+    vector<IndexInfo> indexes;
     db.CreateCollection("character",                  // collection name   
                         SchemaType::FLAT_BUFFERS,     // collection schema type
-                        schema                        // collection schema
+                        schema,                       // collection schema
+                        indexes                       // indexes to create
     );
 
-    std::vector<string> aliases = { "The Imp", "Halfman", "The Little Lion", "Demon Monkey", "The Bloody Hand" };
-    auto tyrion = ConstructCharacter("Tyrion Lannister", "Lannister", VitalStatus::VitalStatus_Alive, "Peter Dinklage", 39, "Winter is Coming", aliases);
+    // lets construct and insert a character
+    FlatBufferBuilder fbb;
+    auto obj = CreateCharacter(fbb, fbb.CreateString("Tyrion Lannister"),
+                               fbb.CreateString("Lannister"),
+                               fbb.CreateString("Peter Dinklage"),
+                               39, fbb.CreateString("Winter is Coming"));
+    fbb.Finish(obj);
 
-    // Insert data into db
+    Buffer tyrion(reinterpret_cast<char*>(fbb.GetBufferPointer()),
+                  fbb.GetSize());
     db.Insert("character",   // collection name in which to insert
               tyrion         // data that is to be inserted
     );
 
 
+    // lets construct and insert multiple play characters
     std::vector<Buffer> characters;
-
-    aliases.clear();
-    aliases = { "Lord Snow", "The Bastard of Winterfell", "King Crow", "The Prince That Was Promised", "The White Wolf" };
-    characters.push_back(ConstructCharacter("Jon Snow", "Stark", VitalStatus::VitalStatus_Alive, "Kit Harington", 21, "Winter is Coming", aliases));
-
-    aliases.clear();
-    aliases = { "Littlefinger" };
-    characters.push_back(ConstructCharacter("Petyr Baelish", "Baelish", VitalStatus::VitalStatus_Alive, "Aidan Gillen", 51, "Lord Snow", aliases));
+    characters.push_back(ConstructCharacter("Jon Snow", "Stark", "Kit Harington", 21, "Winter is Coming"));
+    characters.push_back(ConstructCharacter("Petyr Baelish", "Baelish", "Aidan Gillen", 51, "Lord Snow"));
 
     db.MultiInsert("character",   // collection name in which to insert
                    characters     // data that is to be inserted
     );
 
+    // read data as resultset
+    auto rs = 
+      db.ExecuteSelect("SELECT name, status, age FROM character;");
+    while (rs.Next()) {
+      auto name = rs.GetString(rs.GetColumnIndex("name"));
+      auto sts = rs.GetInteger(rs.GetColumnIndex("status"));
+      auto age = rs.GetInteger(rs.GetColumnIndex("age"));
+    }
+
+    // read data as the original document blob that was inserted
+    rs = db.ExecuteSelect("SELECT _document FROM character;");
+    while (rs.Next()) {
+      auto doc = rs.GetBlob(rs.GetColumnIndex("name"));      
+    }
   } catch (JonoonDBException& ex) {
     cout << ex.to_string() << endl;
     return 1;
