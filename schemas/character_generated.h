@@ -15,13 +15,13 @@ struct Character FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
     VT_NAME = 4,
     VT_HOUSE = 6,
     VT_PLAYED_BY = 8,
-    VT_AGE_YEARS = 10,
+    VT_AGE = 10,
     VT_FIRST_SEEN = 12
   };
   const flatbuffers::String *name() const { return GetPointer<const flatbuffers::String *>(VT_NAME); }
   const flatbuffers::String *house() const { return GetPointer<const flatbuffers::String *>(VT_HOUSE); }
   const flatbuffers::String *played_by() const { return GetPointer<const flatbuffers::String *>(VT_PLAYED_BY); }
-  int32_t age_years() const { return GetField<int32_t>(VT_AGE_YEARS, 0); }
+  int32_t age() const { return GetField<int32_t>(VT_AGE, 0); }
   const flatbuffers::String *first_seen() const { return GetPointer<const flatbuffers::String *>(VT_FIRST_SEEN); }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
@@ -31,7 +31,7 @@ struct Character FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
            verifier.Verify(house()) &&
            VerifyField<flatbuffers::uoffset_t>(verifier, VT_PLAYED_BY) &&
            verifier.Verify(played_by()) &&
-           VerifyField<int32_t>(verifier, VT_AGE_YEARS) &&
+           VerifyField<int32_t>(verifier, VT_AGE) &&
            VerifyField<flatbuffers::uoffset_t>(verifier, VT_FIRST_SEEN) &&
            verifier.Verify(first_seen()) &&
            verifier.EndTable();
@@ -44,7 +44,7 @@ struct CharacterBuilder {
   void add_name(flatbuffers::Offset<flatbuffers::String> name) { fbb_.AddOffset(Character::VT_NAME, name); }
   void add_house(flatbuffers::Offset<flatbuffers::String> house) { fbb_.AddOffset(Character::VT_HOUSE, house); }
   void add_played_by(flatbuffers::Offset<flatbuffers::String> played_by) { fbb_.AddOffset(Character::VT_PLAYED_BY, played_by); }
-  void add_age_years(int32_t age_years) { fbb_.AddElement<int32_t>(Character::VT_AGE_YEARS, age_years, 0); }
+  void add_age(int32_t age) { fbb_.AddElement<int32_t>(Character::VT_AGE, age, 0); }
   void add_first_seen(flatbuffers::Offset<flatbuffers::String> first_seen) { fbb_.AddOffset(Character::VT_FIRST_SEEN, first_seen); }
   CharacterBuilder(flatbuffers::FlatBufferBuilder &_fbb) : fbb_(_fbb) { start_ = fbb_.StartTable(); }
   CharacterBuilder &operator=(const CharacterBuilder &);
@@ -58,11 +58,11 @@ inline flatbuffers::Offset<Character> CreateCharacter(flatbuffers::FlatBufferBui
    flatbuffers::Offset<flatbuffers::String> name = 0,
    flatbuffers::Offset<flatbuffers::String> house = 0,
    flatbuffers::Offset<flatbuffers::String> played_by = 0,
-   int32_t age_years = 0,
+   int32_t age = 0,
    flatbuffers::Offset<flatbuffers::String> first_seen = 0) {
   CharacterBuilder builder_(_fbb);
   builder_.add_first_seen(first_seen);
-  builder_.add_age_years(age_years);
+  builder_.add_age(age);
   builder_.add_played_by(played_by);
   builder_.add_house(house);
   builder_.add_name(name);

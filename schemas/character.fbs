@@ -5,7 +5,7 @@ table Character
   name:string;
   house:string;  
   played_by:string;
-  age_years:int;
+  age:int;
   first_seen:string;  
 }
 

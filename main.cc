@@ -69,8 +69,14 @@ void TutorialOpenDatabase() {
   }
 }
 
+void CleanupOldFiles() {
+  remove("game_of_thrones.dat");
+  remove("game_of_thrones_character.0");
+}
 
 int main(int argc, char** argv) {
+  CleanupOldFiles();
+
   try {
     // Open a database with default options
     Database db(DB_PATH,           // path where db files will be created
@@ -97,17 +103,42 @@ int main(int argc, char** argv) {
                                39, fbb.CreateString("Winter is Coming"));
     fbb.Finish(obj);
 
-    Buffer tyrion(reinterpret_cast<char*>(fbb.GetBufferPointer()),
-                  fbb.GetSize());
+    Buffer tyrion(reinterpret_cast<char*>(fbb.GetBufferPointer()), // Buffer pointer
+                  fbb.GetSize(), // Buffer size
+                  fbb.GetSize(), // Buffer capacity
+                  nullptr);      // Deleter func ptr, nullptr means don't delete memory
+
     db.Insert("character",   // collection name in which to insert
               tyrion         // data that is to be inserted
     );
 
-
     // lets construct and insert multiple play characters
-    std::vector<Buffer> characters;
-    characters.push_back(ConstructCharacter("Jon Snow", "Stark", "Kit Harington", 21, "Winter is Coming"));
-    characters.push_back(ConstructCharacter("Petyr Baelish", "Baelish", "Aidan Gillen", 51, "Lord Snow"));
+    std::vector<Buffer> characters; // vector to hold all documents to be inserted
+    fbb.Clear(); // This is necessary if we want to reuse flatbufferbuilder
+    obj = CreateCharacter(fbb, fbb.CreateString("Jon Snow"),
+                          fbb.CreateString("Stark"),
+                          fbb.CreateString("Kit Harington"),
+                          21, fbb.CreateString("Winter is Coming"));
+    fbb.Finish(obj);
+
+    characters.push_back(
+        Buffer(reinterpret_cast<char*>(fbb.GetBufferPointer()), // Buffer pointer
+               fbb.GetSize()  // Buffer size
+        )
+    );
+
+    fbb.Clear();
+    obj = CreateCharacter(fbb, fbb.CreateString("Petyr Baelish"),
+                          fbb.CreateString("Baelish"),
+                          fbb.CreateString("Aidan Gillen"),
+                          51, fbb.CreateString("Lord Snow"));
+    fbb.Finish(obj);
+
+    characters.push_back(
+      Buffer(reinterpret_cast<char*>(fbb.GetBufferPointer()), // Buffer pointer
+             fbb.GetSize()  // Buffer size
+      )
+    );
 
     db.MultiInsert("character",   // collection name in which to insert
                    characters     // data that is to be inserted
@@ -115,17 +146,17 @@ int main(int argc, char** argv) {
 
     // read data as resultset
     auto rs = 
-      db.ExecuteSelect("SELECT name, status, age FROM character;");
+      db.ExecuteSelect("SELECT name, house, age FROM character;");
     while (rs.Next()) {
       auto name = rs.GetString(rs.GetColumnIndex("name"));
-      auto sts = rs.GetInteger(rs.GetColumnIndex("status"));
+      auto house = rs.GetInteger(rs.GetColumnIndex("house"));
       auto age = rs.GetInteger(rs.GetColumnIndex("age"));
     }
 
     // read data as the original document blob that was inserted
     rs = db.ExecuteSelect("SELECT _document FROM character;");
     while (rs.Next()) {
-      auto doc = rs.GetBlob(rs.GetColumnIndex("name"));      
+      auto doc = rs.GetBlob(rs.GetColumnIndex("_document"));      
     }
   } catch (JonoonDBException& ex) {
     cout << ex.to_string() << endl;
