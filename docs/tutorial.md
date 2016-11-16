@@ -1,5 +1,8 @@
 # Tutorial
-
+This tutorial assumes that you are familiar with serialization library [flatbuffers](http://google.github.io/flatbuffers/) and know how to use it.
+## Pre Req TODO
+* You would need the flatbuffers compiler flatc. 
+* You would need the JonoonDB library.
 ### Open a database
 A JonoonDB database has a name which corresponds to a file system directory. All of the contents of database are stored in this directory. The following example shows how to open a database, creating it if necessary:
 ```c++
@@ -26,7 +29,27 @@ Database db("/path/to/db",     // path where db files will be created
 );
 ```
 ### Create a collection
-In JonoonDB collections are like tables. A given database can have 1 or more collections. Each collection also has a schema which specifies the collection fields and their types. Currently JonoonDB only supports flatbuffers schema type. The code below reads the binary flatbuffers schema from the file characters.bfbs and creates a collection.
+In JonoonDB collections are like tables. A given database can have 1 or more collections. Each collection also has a schema which specifies the collection fields and their types. Currently JonoonDB only supports flatbuffers schema type.
+#### Schema
+Lets look at the flatbuffers schema that we will use for our tutorial.
+```
+namespace jonoondb_tutorial;
+
+table Character
+{
+  name:string;
+  house:string;  
+  played_by:string;
+  age:int;
+  first_seen:string;  
+}
+
+root_type Character;
+```
+At this stage we need to generate generate 
+
+
+The code below reads the binary flatbuffers schema from the file characters.bfbs and creates a collection.
 ```c++
 auto schema = ReadFile("path/to/character.bfbs");
 vector<IndexInfo> indexes;
@@ -90,4 +113,37 @@ db.MultiInsert("character",   // collection name in which to insert
 Note that here we are constructing the Buffer using a different constructor overload. This type of Buffer has its own underlying memory that it will delete on destruction. This was necessary here because we are reusing the FlatbufferBuilder object fbb. We do that by calling fbb.clear() before constructing every new character. Hence the underlying fbb memory is no longer valid after this call, so we create a copy of it before the clear() call.
 
 There are other more optimized ways to go about this as well for example instead of creating new object of type Buffer, you can have a reusable pool of Buffer objects. Another way could have been that you use a different FlatbufferBuilder object to construct each character and then use the technique we used above in the Insert() call. Remember we created the Buffer by specifying the deleter function pointer as nullptr. The approach that will work best for you depends on your application but all of these could be a viable solution depending on your needs.
+### Querying data
+JonoonDB supports quering the documents using SQL. Consider the following example:
+```c++
+auto rs = db.ExecuteSelect("SELECT name, house, age "
+                           "FROM character;");
+while (rs.Next()) {
+  auto name = rs.GetString(rs.GetColumnIndex("name"));
+  auto house = rs.GetString(rs.GetColumnIndex("house"));
+  auto age = rs.GetInteger(rs.GetColumnIndex("age"));
+}
+```
+ExecuteSelect() function can be used to issue SELECT statements. The functions returns a Resultset object. The rs.Next() moves to the next document in the resultset and will keep returning true until there are more documents avaiable in the resultset. 
 
+Here is another example where we are using the some query constraints:
+```c++
+rs = db.ExecuteSelect("SELECT name, house, age "
+                      "FROM character "
+                      "WHERE age > 10 AND house = 'Stark';");
+while (rs.Next()) {
+  auto name = rs.GetString(rs.GetColumnIndex("name"));
+  auto house = rs.GetString(rs.GetColumnIndex("house"));
+  auto age = rs.GetInteger(rs.GetColumnIndex("age"));
+}
+```
+#### Getting the raw documents
+The queries written above gives you the data as structured resultset. What if you want to get back the raw document blob that you inserted? Each collection has a virtual hidden column named **_document**. When used in a query this evalutes to the raw document blob that was originally inserted. For example:
+```c++
+rs = db.ExecuteSelect("SELECT _document FROM character;");
+while (rs.Next()) {
+  auto doc = rs.GetBlob(rs.GetColumnIndex("_document"));      
+}
+```
+This will return the original document that we inserted.
+#### Accessing nested fields TODO

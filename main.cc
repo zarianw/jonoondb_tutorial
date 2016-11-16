@@ -144,16 +144,26 @@ int main(int argc, char** argv) {
                    characters     // data that is to be inserted
     );
 
-    // read data as resultset
-    auto rs = 
-      db.ExecuteSelect("SELECT name, house, age FROM character;");
+    // Read data as resultset
+    auto rs = db.ExecuteSelect("SELECT name, house, age "
+                               "FROM character;");
     while (rs.Next()) {
       auto name = rs.GetString(rs.GetColumnIndex("name"));
-      auto house = rs.GetInteger(rs.GetColumnIndex("house"));
+      auto house = rs.GetString(rs.GetColumnIndex("house"));
       auto age = rs.GetInteger(rs.GetColumnIndex("age"));
     }
 
-    // read data as the original document blob that was inserted
+    // Read data with some query constraints 
+    rs = db.ExecuteSelect("SELECT name, house, age "
+                          "FROM character "
+                          "WHERE age > 10 AND house = 'Stark';");
+    while (rs.Next()) {
+      auto name = rs.GetString(rs.GetColumnIndex("name"));
+      auto house = rs.GetString(rs.GetColumnIndex("house"));
+      auto age = rs.GetInteger(rs.GetColumnIndex("age"));
+    }
+
+    // Read data as the original document blob that was inserted
     rs = db.ExecuteSelect("SELECT _document FROM character;");
     while (rs.Next()) {
       auto doc = rs.GetBlob(rs.GetColumnIndex("_document"));      
