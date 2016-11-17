@@ -1,10 +1,15 @@
 namespace jonoondb_tutorial;
 
-table Character
-{
+table Actor {
+  name: string;
+  date_of_birth: string;
+  birth_city: string;
+}
+
+table Character {
   name:string;
   house:string;  
-  played_by:string;
+  played_by:Actor;
   age:int;
   first_seen:string;  
 }

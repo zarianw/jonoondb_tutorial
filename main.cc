@@ -2,7 +2,7 @@
 #include <fstream>
 
 #include "config_generated.h"
-#include "schemas/character_generated.h"
+#include "character_generated.h"
 #include "jonoondb/jonoondb_api/database.h"
 
 using namespace std;
@@ -37,18 +37,6 @@ string ReadFile(const string& path, bool isBinary = true) {
   }
 
   return fileContents;
-}
-
-Buffer ConstructCharacter(string name, string house, string playedBy,
-                          int age, string firstSeen) {
-  FlatBufferBuilder fbb;
-  auto fbName = fbb.CreateString(name);
-  auto fbHouse = fbb.CreateString(house);
-  auto fbPlayedBy = fbb.CreateString(playedBy);
-  auto fbFirstSeen = fbb.CreateString(firstSeen);  
-  auto obj = CreateCharacter(fbb, fbName, fbHouse, fbPlayedBy, age, fbFirstSeen);
-  fbb.Finish(obj);
-  return Buffer(reinterpret_cast<char*>(fbb.GetBufferPointer()), fbb.GetSize());
 }
 
 void TutorialOpenDatabase() {
@@ -97,9 +85,12 @@ int main(int argc, char** argv) {
 
     // lets construct and insert a character
     FlatBufferBuilder fbb;
+    auto actor = CreateActor(fbb, fbb.CreateString("Peter Dinklage"),
+                             fbb.CreateString("Morristown"),
+                             fbb.CreateString("1969-06-11"));
     auto obj = CreateCharacter(fbb, fbb.CreateString("Tyrion Lannister"),
                                fbb.CreateString("Lannister"),
-                               fbb.CreateString("Peter Dinklage"),
+                               actor,
                                39, fbb.CreateString("Winter is Coming"));
     fbb.Finish(obj);
 
@@ -115,9 +106,12 @@ int main(int argc, char** argv) {
     // lets construct and insert multiple play characters
     std::vector<Buffer> characters; // vector to hold all documents to be inserted
     fbb.Clear(); // This is necessary if we want to reuse flatbufferbuilder
+    actor = CreateActor(fbb, fbb.CreateString("Kit Harington"),
+                        fbb.CreateString("London"),
+                        fbb.CreateString("1986-12-26"));
     obj = CreateCharacter(fbb, fbb.CreateString("Jon Snow"),
                           fbb.CreateString("Stark"),
-                          fbb.CreateString("Kit Harington"),
+                          actor,
                           21, fbb.CreateString("Winter is Coming"));
     fbb.Finish(obj);
 
@@ -128,9 +122,12 @@ int main(int argc, char** argv) {
     );
 
     fbb.Clear();
+    actor = CreateActor(fbb, fbb.CreateString("Aidan Gillen"),
+                        fbb.CreateString("Dublin"),
+                        fbb.CreateString("1968-04-24"));
     obj = CreateCharacter(fbb, fbb.CreateString("Petyr Baelish"),
                           fbb.CreateString("Baelish"),
-                          fbb.CreateString("Aidan Gillen"),
+                          actor,
                           51, fbb.CreateString("Lord Snow"));
     fbb.Finish(obj);
 
@@ -168,6 +165,16 @@ int main(int argc, char** argv) {
     while (rs.Next()) {
       auto doc = rs.GetBlob(rs.GetColumnIndex("_document"));      
     }
+
+    // Read nested fields
+    rs = db.ExecuteSelect("SELECT \"played_by.name\", \"played_by.date_of_birth\" "
+                          "FROM character "
+                          "WHERE \"played_by.name\" = 'Aidan Gillen';");
+    while (rs.Next()) {
+      auto actName = rs.GetString(rs.GetColumnIndex("played_by.name"));
+      auto dob = rs.GetString(rs.GetColumnIndex("played_by.date_of_birth"));      
+    }
+
   } catch (JonoonDBException& ex) {
     cout << ex.to_string() << endl;
     return 1;

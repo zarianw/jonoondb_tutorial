@@ -8,7 +8,54 @@
 
 namespace jonoondb_tutorial {
 
+struct Actor;
 struct Character;
+
+struct Actor FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  enum {
+    VT_NAME = 4,
+    VT_DATE_OF_BIRTH = 6,
+    VT_BIRTH_CITY = 8
+  };
+  const flatbuffers::String *name() const { return GetPointer<const flatbuffers::String *>(VT_NAME); }
+  const flatbuffers::String *date_of_birth() const { return GetPointer<const flatbuffers::String *>(VT_DATE_OF_BIRTH); }
+  const flatbuffers::String *birth_city() const { return GetPointer<const flatbuffers::String *>(VT_BIRTH_CITY); }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyField<flatbuffers::uoffset_t>(verifier, VT_NAME) &&
+           verifier.Verify(name()) &&
+           VerifyField<flatbuffers::uoffset_t>(verifier, VT_DATE_OF_BIRTH) &&
+           verifier.Verify(date_of_birth()) &&
+           VerifyField<flatbuffers::uoffset_t>(verifier, VT_BIRTH_CITY) &&
+           verifier.Verify(birth_city()) &&
+           verifier.EndTable();
+  }
+};
+
+struct ActorBuilder {
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_name(flatbuffers::Offset<flatbuffers::String> name) { fbb_.AddOffset(Actor::VT_NAME, name); }
+  void add_date_of_birth(flatbuffers::Offset<flatbuffers::String> date_of_birth) { fbb_.AddOffset(Actor::VT_DATE_OF_BIRTH, date_of_birth); }
+  void add_birth_city(flatbuffers::Offset<flatbuffers::String> birth_city) { fbb_.AddOffset(Actor::VT_BIRTH_CITY, birth_city); }
+  ActorBuilder(flatbuffers::FlatBufferBuilder &_fbb) : fbb_(_fbb) { start_ = fbb_.StartTable(); }
+  ActorBuilder &operator=(const ActorBuilder &);
+  flatbuffers::Offset<Actor> Finish() {
+    auto o = flatbuffers::Offset<Actor>(fbb_.EndTable(start_, 3));
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<Actor> CreateActor(flatbuffers::FlatBufferBuilder &_fbb,
+   flatbuffers::Offset<flatbuffers::String> name = 0,
+   flatbuffers::Offset<flatbuffers::String> date_of_birth = 0,
+   flatbuffers::Offset<flatbuffers::String> birth_city = 0) {
+  ActorBuilder builder_(_fbb);
+  builder_.add_birth_city(birth_city);
+  builder_.add_date_of_birth(date_of_birth);
+  builder_.add_name(name);
+  return builder_.Finish();
+}
 
 struct Character FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   enum {
@@ -20,7 +67,7 @@ struct Character FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   };
   const flatbuffers::String *name() const { return GetPointer<const flatbuffers::String *>(VT_NAME); }
   const flatbuffers::String *house() const { return GetPointer<const flatbuffers::String *>(VT_HOUSE); }
-  const flatbuffers::String *played_by() const { return GetPointer<const flatbuffers::String *>(VT_PLAYED_BY); }
+  const Actor *played_by() const { return GetPointer<const Actor *>(VT_PLAYED_BY); }
   int32_t age() const { return GetField<int32_t>(VT_AGE, 0); }
   const flatbuffers::String *first_seen() const { return GetPointer<const flatbuffers::String *>(VT_FIRST_SEEN); }
   bool Verify(flatbuffers::Verifier &verifier) const {
@@ -30,7 +77,7 @@ struct Character FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
            VerifyField<flatbuffers::uoffset_t>(verifier, VT_HOUSE) &&
            verifier.Verify(house()) &&
            VerifyField<flatbuffers::uoffset_t>(verifier, VT_PLAYED_BY) &&
-           verifier.Verify(played_by()) &&
+           verifier.VerifyTable(played_by()) &&
            VerifyField<int32_t>(verifier, VT_AGE) &&
            VerifyField<flatbuffers::uoffset_t>(verifier, VT_FIRST_SEEN) &&
            verifier.Verify(first_seen()) &&
@@ -43,7 +90,7 @@ struct CharacterBuilder {
   flatbuffers::uoffset_t start_;
   void add_name(flatbuffers::Offset<flatbuffers::String> name) { fbb_.AddOffset(Character::VT_NAME, name); }
   void add_house(flatbuffers::Offset<flatbuffers::String> house) { fbb_.AddOffset(Character::VT_HOUSE, house); }
-  void add_played_by(flatbuffers::Offset<flatbuffers::String> played_by) { fbb_.AddOffset(Character::VT_PLAYED_BY, played_by); }
+  void add_played_by(flatbuffers::Offset<Actor> played_by) { fbb_.AddOffset(Character::VT_PLAYED_BY, played_by); }
   void add_age(int32_t age) { fbb_.AddElement<int32_t>(Character::VT_AGE, age, 0); }
   void add_first_seen(flatbuffers::Offset<flatbuffers::String> first_seen) { fbb_.AddOffset(Character::VT_FIRST_SEEN, first_seen); }
   CharacterBuilder(flatbuffers::FlatBufferBuilder &_fbb) : fbb_(_fbb) { start_ = fbb_.StartTable(); }
@@ -57,7 +104,7 @@ struct CharacterBuilder {
 inline flatbuffers::Offset<Character> CreateCharacter(flatbuffers::FlatBufferBuilder &_fbb,
    flatbuffers::Offset<flatbuffers::String> name = 0,
    flatbuffers::Offset<flatbuffers::String> house = 0,
-   flatbuffers::Offset<flatbuffers::String> played_by = 0,
+   flatbuffers::Offset<Actor> played_by = 0,
    int32_t age = 0,
    flatbuffers::Offset<flatbuffers::String> first_seen = 0) {
   CharacterBuilder builder_(_fbb);
