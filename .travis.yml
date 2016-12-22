@@ -1,0 +1,36 @@
+sudo: required
+dist: trusty
+
+language: cpp
+
+os:
+- linux
+
+compiler:
+- gcc
+
+env:
+  matrix:
+    - BUILD_TYPE=Debug
+    - BUILD_TYPE=Release    
+  global:
+    - GCC_VERSION="5"
+
+before_install:
+- if [ "$TRAVIS_OS_NAME" == "linux" ]; then sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test; fi
+- if [ "$TRAVIS_OS_NAME" == "linux" ]; then sudo apt-get update -qq; fi
+- if [ "$TRAVIS_OS_NAME" == "linux" ]; then sudo apt-get install -qq g++-$GCC_VERSION; fi
+- if [ "$TRAVIS_OS_NAME" == "linux" ]; then sudo apt-get install -qq gcc-$GCC_VERSION; fi
+- if [ "$TRAVIS_OS_NAME" == "linux" ]; then sudo ln -s -v -f $(which g++-$GCC_VERSION) /usr/bin/g++; fi
+- if [ "$TRAVIS_OS_NAME" == "linux" ]; then sudo ln -s -v -f $(which gcc-$GCC_VERSION) /usr/bin/gcc; fi
+
+install:
+- bash ./scripts/install_boost_1.60.0.sh
+- bash ./scripts/install_jonoondb_master.sh
+
+script:
+- cmake . -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=$BUILD_TYPE && make -j2
+
+cache:
+  directories:
+  - boost_1_60_0
