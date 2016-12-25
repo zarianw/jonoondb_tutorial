@@ -55,7 +55,7 @@ Before proceeding any further we need to generate few files using the flatbuffer
 ```
 flatc -c -b --schema character.fbs
 ```
-This will generate a header file **character_generated.h** and binary flatbuffers schema file **chracter.bfbs**. The character_generated.h file has helper functions to generate flatbuffers object for Character type. The chracter.bfbs has the same schema shown above but in binary form. This is required because internally JonoonDB uses flatbuffers reflection mechanism to read flatbuffer objects and for reflection we need the binary schema.
+This will generate a header file **character_generated.h** and binary flatbuffers schema file **character.bfbs**. The character_generated.h file has helper functions to generate flatbuffers object for Character type. The chracter.bfbs has the same schema shown above but in binary form. This is required because internally JonoonDB uses flatbuffers reflection mechanism to read flatbuffer objects and for reflection we need the binary schema.
 
 The code below reads the binary flatbuffers schema from the file characters.bfbs and creates a collection.
 ```c++
