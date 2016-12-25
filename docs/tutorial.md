@@ -3,6 +3,7 @@ This tutorial assumes that you are familiar with serialization library [flatbuff
 ### Prerequisite
 * You would need the flatbuffers compiler flatc and its header files. You can build it from sources by following directions at this [link](http://google.github.io/flatbuffers/flatbuffers_guide_building.html). 
 * You would need the [JonoonDB library](https://github.com/zarianw/jonoondb).
+
 ### Open a database
 A JonoonDB database has a name which corresponds to a file system directory. All of the contents of database are stored in this directory. The following example shows how to open a database, creating it if necessary:
 ```c++
@@ -132,7 +133,7 @@ Note that here we are constructing the Buffer using a different constructor over
 
 There are other more optimized ways to go about this as well for example instead of creating new object of type Buffer, you can have a reusable pool of Buffer objects. Another way could have been that you use a different FlatbufferBuilder object to construct each character and then use the technique we used above in the Insert() call. Remember we created the Buffer by specifying the deleter function pointer as nullptr. The approach that will work best for you depends on your application but all of these could be a viable solution depending on your needs.
 ### Querying data
-JonoonDB supports quering the documents using SQL. Consider the following example:
+JonoonDB supports querying the documents using SQL. Consider the following example:
 ```c++
 auto rs = db.ExecuteSelect("SELECT name, house, age "
                            "FROM character;");
@@ -175,11 +176,23 @@ while (rs.Next()) {
   auto dob = rs.GetString(rs.GetColumnIndex("played_by.date_of_birth"));      
 }
 ```
-The important thing to note here is that the nested fields are **dot separated** and **encolsed in double qoutes ""**. Hence in the above example we wrote **"played_by.name"** and **"played_by.date_of_birth"**. This is the only difference other than that you can use them in SQL like any other field. The above query in plain text is shown below:
+The important thing to note here is that the nested fields are **dot separated** and **enclosed in double quotes ""**. Hence in the above example we wrote **"played_by.name"** and **"played_by.date_of_birth"**. This is the only difference other than that you can use them in SQL like any other field. The above query in plain text is shown below:
 ```sql
 SELECT "played_by.name", "played_by.date_of_birth"
 FROM character
 WHERE "played_by.name" = 'Aidan Gillen';
 ```
-#### Quering Date and Time: TODO
-#### Indexing: TODO
+#### Querying Date and Time: TODO
+
+#### Indexing
+Indexing is the mechanism that enables JonoonDB to do efficient lookups, aggregations and sorting. Without indexes JonoonDB must do a full collection scan i.e scan each and every document in the collection. JonoonDB's approach to indexing is very different to traditional databases. This is what sets it apart from the pack as well.  
+
+In traditional databases the practical number of indexes that can be created on a table is very low. The reason is simple as you create more that few indexes the insert performance becomes so slow that the whole database comes to a halt. In JonoonDB all indexes are maintained in memory using really fast in-memory data structures. This enables JonoonDB to maintain fast insert performance even with dozens of indexes. This of-course means that your indexes should fit in memory for good performance but that is a requirement that you will find in all leading databases.
+
+The second big difference is how JonoonDB query planner can use multiple indexes in a single query plan. A number of leading databases can only use 1 index in a given query plan. JonoonDB can use multiple indexes in a single query plan.
+
+The third difference is the extensible indexing design in JonoonDB. JonoonDB is designed from the grounds up where different type of indexes can be developed and added. This means that more and more index implementations will be added in future. This gives a tremendous amount of flexibility and you as a user can write your own index implementation if you want. You will never to be locked in to what a given database provides. This is an important feature that enables JonoonDB to be a one size fits all database. The secret sauce is to keep the same information in many different forms (row oriented, column oriented, inverted index) and then use the appropriate form(s) based on the query.
+
+The following index implementations exist in JonoonDB.
+1. **InvertedCompressedBitmap:** In this data structure. The values are mapped to the document ids in which they exist. For example if you have a field State then value such as CA will be mapped to the document ids which have field State = CA. Hence the word inverted. The document ids are stored as compressed bitmap which enables huge space saving if used on the right field. Further all values are stored in a sorted tree data structure which enables efficient range based lookups. For example if you have a column Age and you want to do a query like Age > 10 and Age < 20. You should almost always use this index type for low cardinality (less than 50K distinct values but do your own testing) columns but even with high cardinality columns they can yield superior performance. Here is a [link](http://lemire.me/blog/2008/08/20/the-mythical-bitmap-index/) to an article that talks about bitmap indexes and offers good advice and benchmarks.
+2. **Vector:** This index data structure is a simple vector (array) of values as they exist in the documents. The index of the vector is the document id and content at that index location is the actual value. This is a good default if you want to arrange your data as a column store. The column oriented data results in really fast scans and aggregations. Its also much faster to insert data in this data structure.
