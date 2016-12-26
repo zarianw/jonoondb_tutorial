@@ -143,7 +143,7 @@ while (rs.Next()) {
   auto age = rs.GetInteger(rs.GetColumnIndex("age"));
 }
 ```
-ExecuteSelect() function can be used to issue SELECT statements. The functions returns a Resultset object. The rs.Next() moves to the next document in the resultset and will keep returning true until there are more documents avaiable in the resultset. 
+ExecuteSelect() function can be used to issue SELECT statements. The functions returns a Resultset object. The rs.Next() moves to the next document in the resultset and will keep returning true until there are more documents available in the resultset. 
 
 Here is another example where we are using the some query constraints:
 ```c++
@@ -157,7 +157,7 @@ while (rs.Next()) {
 }
 ```
 #### Getting the raw documents
-The queries written above gives you the data as structured resultset. What if you want to get back the raw document blob that you inserted? Each collection has a virtual hidden column named **_document**. When used in a query this evalutes to the raw document blob that was originally inserted. For example:
+The queries written above gives you the data as structured resultset. What if you want to get back the raw document blob that you inserted? Each collection has a virtual hidden column named **_document**. When used in a query this evaluates to the raw document blob that was originally inserted. For example:
 ```c++
 rs = db.ExecuteSelect("SELECT _document FROM character;");
 while (rs.Next()) {
@@ -166,7 +166,7 @@ while (rs.Next()) {
 ```
 This will return the original document that we inserted.
 #### Querying/Accessing nested fields
-JonoonDB supports nested fields as well. In our schema we have a nested field of type **Actor**. Lets look at an example where we want to retrive a nested field and also filter the results based on its value.
+JonoonDB supports nested fields as well. In our schema we have a nested field of type **Actor**. Lets look at an example where we want to retrieve a nested field and also filter the results based on its value.
 ```c++
 rs = db.ExecuteSelect("SELECT \"played_by.name\", \"played_by.date_of_birth\" "
                       "FROM character "
@@ -191,8 +191,31 @@ In traditional databases the practical number of indexes that can be created on 
 
 The second big difference is how JonoonDB query planner can use multiple indexes in a single query plan. A number of leading databases can only use 1 index in a given query plan. JonoonDB can use multiple indexes in a single query plan.
 
-The third difference is the extensible indexing design in JonoonDB. JonoonDB is designed from the grounds up where different type of indexes can be developed and added. This means that more and more index implementations will be added in future. This gives a tremendous amount of flexibility and you as a user can write your own index implementation if you want. You will never to be locked in to what a given database provides. This is an important feature that enables JonoonDB to be a one size fits all database. The secret sauce is to keep the same information in many different forms (row oriented, column oriented, inverted index) and then use the appropriate form(s) based on the query.
+The third difference is the extensible indexing design in JonoonDB. JonoonDB is designed from the grounds up where different type of indexes can be developed and added. This means that more and more index implementations will be added in future. This gives a tremendous amount of flexibility and you as a user can write your own index implementation if you want. You will never be locked in to what a given database provides. This is one of the important features that enables JonoonDB to be a one size fits all database. 
 
 The following index implementations exist in JonoonDB.
 1. **InvertedCompressedBitmap:** In this data structure. The values are mapped to the document ids in which they exist. For example if you have a field State then value such as CA will be mapped to the document ids which have field State = CA. Hence the word inverted. The document ids are stored as compressed bitmap which enables huge space saving if used on the right field. Further all values are stored in a sorted tree data structure which enables efficient range based lookups. For example if you have a column Age and you want to do a query like Age > 10 and Age < 20. You should almost always use this index type for low cardinality (less than 50K distinct values but do your own testing) columns but even with high cardinality columns they can yield superior performance. Here is a [link](http://lemire.me/blog/2008/08/20/the-mythical-bitmap-index/) to an article that talks about bitmap indexes and offers good advice and benchmarks.
 2. **Vector:** This index data structure is a simple vector (array) of values as they exist in the documents. The index of the vector is the document id and content at that index location is the actual value. This is a good default if you want to arrange your data as a column store. The column oriented data results in really fast scans and aggregations. Its also much faster to insert data in this data structure.
+
+The following code snippet builds on top of the tutorial (add link) example and shows how to create an index.
+
+```c++
+vector<IndexInfo> indexes;
+indexes.push_back(IndexInfo("idx_name",        // Name
+                            IndexType::VECTOR, // Type
+                            "age",             // Indexed Field
+                            true)              // IsAscending
+);
+indexes.push_back(IndexInfo("idx_age",    // Name
+                            IndexType::INVERTED_COMPRESSED_BITMAP, // Type
+                            "age",        // Indexed Field
+                            true)         // IsAscending
+);
+
+db.CreateCollection("character",                  // collection name   
+                    SchemaType::FLAT_BUFFERS,     // collection schema type
+                    schema,                       // collection schema
+                    indexes                       // indexes to create
+);
+```
+

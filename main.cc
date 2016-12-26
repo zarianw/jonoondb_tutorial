@@ -39,24 +39,6 @@ string ReadFile(const string& path, bool isBinary = true) {
   return fileContents;
 }
 
-void TutorialOpenDatabase() {
-  {
-    // Open a database with default options
-    Database db("/path/to/db",           // path where db files will be created
-                "game_of_thrones"  // database name              
-    );
-  }
-
-  {
-    Options opt;
-    opt.SetCreateDBIfMissing(false);
-    Database db("/path/to/db",           // path where db files will be created
-                "game_of_thrones", // database name 
-                opt                // options             
-    );
-  }
-}
-
 void CleanupOldFiles() {
   remove("game_of_thrones.dat");
   remove("game_of_thrones_character.0");
@@ -78,6 +60,24 @@ int main(int argc, char** argv) {
 
     vector<IndexInfo> indexes;
     db.CreateCollection("character",                  // collection name   
+                        SchemaType::FLAT_BUFFERS,     // collection schema type
+                        schema,                       // collection schema
+                        indexes                       // indexes to create
+    );
+
+    indexes.push_back(IndexInfo("idx_age",    // Name
+                                IndexType::INVERTED_COMPRESSED_BITMAP, // Type
+                                "age",        // Indexed Field
+                                true)         // IsAscending
+    );
+
+    indexes.push_back(IndexInfo("idx_name",        // Name
+                                IndexType::VECTOR, // Type
+                                "age",             // Indexed Field
+                                true)              // IsAscending
+    );
+
+    db.CreateCollection("character_with_index",                  // collection name   
                         SchemaType::FLAT_BUFFERS,     // collection schema type
                         schema,                       // collection schema
                         indexes                       // indexes to create
@@ -116,9 +116,9 @@ int main(int argc, char** argv) {
     fbb.Finish(obj);
 
     characters.push_back(
-        Buffer(reinterpret_cast<char*>(fbb.GetBufferPointer()), // Buffer pointer
-               fbb.GetSize()  // Buffer size
-        )
+      Buffer(reinterpret_cast<char*>(fbb.GetBufferPointer()), // Buffer pointer
+             fbb.GetSize()  // Buffer size
+      )
     );
 
     fbb.Clear();
@@ -163,7 +163,7 @@ int main(int argc, char** argv) {
     // Read data as the original document blob that was inserted
     rs = db.ExecuteSelect("SELECT _document FROM character;");
     while (rs.Next()) {
-      auto doc = rs.GetBlob(rs.GetColumnIndex("_document"));      
+      auto doc = rs.GetBlob(rs.GetColumnIndex("_document"));
     }
 
     // Read nested fields
@@ -172,7 +172,7 @@ int main(int argc, char** argv) {
                           "WHERE \"played_by.name\" = 'Aidan Gillen';");
     while (rs.Next()) {
       auto actName = rs.GetString(rs.GetColumnIndex("played_by.name"));
-      auto dob = rs.GetString(rs.GetColumnIndex("played_by.date_of_birth"));      
+      auto dob = rs.GetString(rs.GetColumnIndex("played_by.date_of_birth"));
     }
 
   } catch (JonoonDBException& ex) {
@@ -186,5 +186,35 @@ int main(int argc, char** argv) {
   return 0;
 }
 
+void TutorialAlternateSnippets() {
+  Options opt;
+  opt.SetCreateDBIfMissing(false);
+  Database db("/path/to/db",        // path where db files will be created
+              "game_of_thrones",    // database name 
+              opt                   // options             
+  );
 
+  // Read the binary flatbuffer schema from file.
+  // This defines the collection schema.
+  string schemaFolder = SCHEMA_PATH;
+  auto schema = ReadFile(schemaFolder + "/character.bfbs");
+
+  vector<IndexInfo> indexes;
+  indexes.push_back(IndexInfo("idx_name",        // Name
+                              IndexType::VECTOR, // Type
+                              "age",             // Indexed Field
+                              true)              // IsAscending
+  );
+  indexes.push_back(IndexInfo("idx_age",    // Name
+                              IndexType::INVERTED_COMPRESSED_BITMAP, // Type
+                              "age",        // Indexed Field
+                              true)         // IsAscending
+  );
+  
+  db.CreateCollection("character",                  // collection name   
+                      SchemaType::FLAT_BUFFERS,     // collection schema type
+                      schema,                       // collection schema
+                      indexes                       // indexes to create
+  );
+}
 
